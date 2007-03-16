@@ -72,8 +72,6 @@ the projects that end (end_date) in the time period between StartDate and End Da
 by showing the relationship between quotes and purchase orders
 (an approximation of the gross margin).
 
-The report lists all projects that have started in the period 
-between Start Date and End Date and lists their financial documents. 
 This selection is meant to provide a reasonable approximation 
 for 'revenues in this period' if there are many small projects, 
 as it is the case in translation agencies.<br>
@@ -327,7 +325,7 @@ order by
 set report_def [list \
     group_by project_customer_id \
     header {
-	"\#colspan=13 <a href=$this_url&customer_id=$project_customer_id&level_of_detail=4 
+	"\#colspan=14 <a href=$this_url&customer_id=$project_customer_id&level_of_detail=4 
 	target=_blank><img src=/intranet/images/plus_9.gif width=9 height=9 border=0></a> 
 	<b><a href=$company_url$project_customer_id>$project_customer_name</a></b>"
     } \
@@ -336,6 +334,7 @@ set report_def [list \
             header { } \
 	    content [list \
 		    header {
+			""
 			""
 			""
 			"<a href=$invoice_url$cost_id>$cost_name</a>"
@@ -349,15 +348,17 @@ set report_def [list \
 			"<nobr>$timesheet_amount_pretty</nobr>"
 			""
 			""
+			""
 		    } \
 		    content {} \
 	    ] \
             footer {
 		"" 
-		"<a href=$this_url&project_id=$project_id&level_of_detail=4 
-		target=_blank><img src=/intranet/images/plus_9.gif width=9 height=9 border=0></a> 
-		<b><a href=$project_url$project_id><nobr>$project_name</nobr></a></b>"
-		"" 
+		"<nobr><a href=$this_url&project_id=$project_id&level_of_detail=4 
+		target=_blank><img src=/intranet/images/plus_9.gif width=9 height=9 border=0></a>
+		<b><a href=$project_url$project_id>$project_nr</nobr></a></b>"
+		"<b><a href=$project_url$project_id><nobr>$project_name</nobr></a></b>"
+		""
 		"" 
 		"<nobr><i>$invoice_subsubtotal $default_currency</i></nobr>" 
 		"<nobr><i>$delnote_subsubtotal $default_currency</i></nobr>" 
@@ -368,6 +369,7 @@ set report_def [list \
 		"<nobr><i>$timesheet_subsubtotal $default_currency</i></nobr>"
 		"<nobr><i>$po_per_quote_perc_subsubtotal</i></nobr>"
 		"<nobr><i>$gross_profit_subsubtotal</i></nobr>"
+		"<nobr><i>$wip_subsubtotal</i></nobr>"
             } \
     ] \
     footer {  
@@ -384,11 +386,12 @@ set report_def [list \
 	"<b>$timesheet_subtotal $default_currency</b>"
 	"<b>$po_per_quote_perc_subtotal</b>"
 	"<b>$gross_profit_subtotal</b>"
+	"<b>$wip_subtotal</b>"
     } \
 ]
 
 # Global header/footer
-set header0 {"Cust" "Project" "Name" "Sales Rep" "Invoice" "Delnote" "Quote" "Bill" "PO" "Expense" "Timesheet" "PO/Quote" "Gross Profit"}
+set header0 {"Cust" "Project" "Name" "Sales Rep" "Invoice" "Delnote" "Quote" "Bill" "PO" "Expense" "Timesheet" "PO/Quote" "Gross Profit" "WIP"}
 set footer0 {
 	"" 
 	""
@@ -403,6 +406,7 @@ set footer0 {
 	"<br><b><i>$timesheet_total $default_currency</i></b>"
 	"<br><b><i>$po_per_quote_perc_total</i></b>"
 	"<br><b><i>$gross_profit_total</i></b>"
+	"<br><b><i>$wip_total</i></b>"
 }
 
 
@@ -609,7 +613,8 @@ db_foreach sql $sql {
 	  set po_per_quote_perc_subsubtotal [expr int(10000.0 * $po_subsubtotal / $quote_subsubtotal) / 100.0]
 	  set po_per_quote_perc_subsubtotal "$po_per_quote_perc_subsubtotal %"
 	}
-	set gross_profit_subsubtotal [expr $invoice_subsubtotal - $bill_subsubtotal]
+	set gross_profit_subsubtotal [expr $invoice_subsubtotal - $bill_subsubtotal - $expense_subsubtotal]
+	set wip_subsubtotal [expr $timesheet_subsubtotal + $bill_subsubtotal + $expense_subsubtotal - $invoice_subsubtotal]
 
 
 	# Calculated Variables for footer0
@@ -617,7 +622,8 @@ db_foreach sql $sql {
 	if {[expr $quote_subtotal+0] != 0} {
 	    set po_per_quote_perc_subtotal [expr int(10000.0 * $po_subtotal / $quote_subtotal) / 100.0]
 	}
-	set gross_profit_subtotal [expr $invoice_subtotal - $bill_subtotal]
+	set gross_profit_subtotal [expr $invoice_subtotal - $bill_subtotal - $expense_subtotal]
+	set wip_subtotal [expr $timesheet_subtotal + $bill_subtotal + $expense_subtotal - $invoice_subtotal]
 
 
 	set last_value_list [im_report_render_header \
@@ -644,7 +650,8 @@ set po_per_quote_perc_total "undef"
 if {[expr $quote_total+0] != 0} {
     set po_per_quote_perc_total [expr int(10000.0 * $po_total / $quote_total) / 100.0]
 }
-set gross_profit_total [expr $invoice_total - $bill_total]
+set gross_profit_total [expr $invoice_total - $bill_total - $expense_total]
+set wip_total [expr $timesheet_total + $bill_total + $expense_total - $invoice_total]
 
 
 
