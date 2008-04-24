@@ -72,57 +72,6 @@ if {!$custom_fields_p} {
 }
 
 
-
-# ------------------------------------------------------------
-# Find out all fields per object type
-
-ad_proc im_dynfield_object_attributes_for_select {
-     -object_type:required
-} {
-    Returns a list {key1 value1 key2 value2 ...} of attributes
-    and pretty_names for object.
-    The result is meant to be appended to the select list of
-    a report with custom fields
-} {
-
-    set dynfield_sql "
-    select 
-	aa.attribute_name,
-        aa.pretty_name,
-	ot.pretty_name as object_type_pretty_name
-    from 
-	acs_attributes aa
-	RIGHT OUTER join 
-		im_dynfield_attributes fa 
-		ON (aa.attribute_id = fa.acs_attribute_id)
-	LEFT OUTER join
-		(select	* from im_dynfield_layout where page_url = '') la
-		ON (fa.attribute_id = la.attribute_id)
-	LEFT OUTER join
-		user_tab_columns c
-		ON (c.table_name = upper(aa.table_name) and c.column_name = upper(aa.attribute_name)),
-	im_dynfield_widgets w,
-	acs_object_types ot
-    where 
-	aa.object_type = :object_type
-	and fa.widget_name = w.widget_name
-	and aa.object_type = ot.object_type
-    order by
-	la.pos_y, la.pos_x, aa.attribute_name
-    "
-
-    set field_options [list]
-    db_foreach dynfield_fields $dynfield_sql {
-	lappend field_options $attribute_name
-	lappend field_options "$object_type_pretty_name - $pretty_name"
-    }
-    
-    return $field_options
-}
-
-
-
-
 # ------------------------------------------------------------
 # Page Settings
 
@@ -350,6 +299,12 @@ if {"" != $errors} {
 }
 
 
+set deref_list [im_dynfield_object_attributes_derefs -object_type "im_company" -prefix "cust."]
+set deref_list [concat $deref_list [im_dynfield_object_attributes_derefs -object_type "im_project" -prefix "p."]]
+set deref_extra_select [join $deref_list ",\n\t"]
+if {"" != $deref_extra_select} { set deref_extra_select ",\n\t$deref_extra_select" }
+
+# ad_return_complaint 1 "<pre>$deref_extra_select</pre>"
 
 set sql "
 select
@@ -411,6 +366,8 @@ select
 		im_name_from_user_id(p.company_contact_id) || '</a>' as company_contact_link,
 	im_category_from_id(p.source_language_id) as source_language,
 	im_category_from_id(p.subject_area_id) as subject_area
+
+	$deref_extra_select
 from
 	($inner_sql) c
 	LEFT OUTER JOIN im_projects p on (c.project_project_id = p.project_id)
@@ -513,7 +470,9 @@ for {set i 1} {$i <= $max_col} {incr i} {
     set pos [lsearch [array get location] "cust$i"]
     if {$pos > -1} {
 	set row [lindex [array get location] [expr $pos-1]]
-	set cont "<nobr>\$$field($row)</nobr>"
+	if {"" != $field($row)} {
+	    set cont "<nobr>\$$field($row)</nobr>"
+	}
     }
     lappend project_customer_footer $cont
 }
