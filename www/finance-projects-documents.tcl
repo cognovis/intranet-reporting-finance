@@ -272,32 +272,13 @@ set inner_sql "
 		)
 "
 
-# Deal with invoices related to multiple 
-set multiples_sql "
-	select
-		count(*) as cnt,
-		cost_id,
-		cost_name
-	from
-		($inner_sql) i
-	group by
-		cost_id, cost_name
-	having
-		count(*) > 1
-"
+# ------------------------------------------------------------
+# Deal with invoices related to multiple projects
 
-set errors ""
-db_foreach multiples $multiples_sql {
-    append errors "<li>Financial document <a href=[export_vars -base "/intranet-invoices/view" {{invoice_id $cost_id}}]>$cost_name</a> is associated with more then one project.\n"
-}
+im_invoices_check_for_multi_project_invoices
 
-if {"" != $errors} {
-    ad_return_complaint 1 "<p>Financial documents related to multiple projects currently cause errors in this report.</p>
-	<ul>$errors</ul><p>
-	Please assign every financial document to a single project (usually the main project).</p>\n"
-    return
-}
 
+# ------------------------------------------------------------
 
 set deref_list [im_dynfield_object_attributes_derefs -object_type "im_company" -prefix "cust."]
 set deref_list [concat $deref_list [im_dynfield_object_attributes_derefs -object_type "im_project" -prefix "p."]]

@@ -146,6 +146,13 @@ set user_url "/intranet/users/view?user_id="
 set this_url [export_vars -base "/intranet-reporting/finance-projects-documents" {start_date end_date} ]
 set current_url [im_url_with_query]
 
+
+# ------------------------------------------------------------
+# Deal with invoices related to multiple projects
+
+im_invoices_check_for_multi_project_invoices
+
+
 # ------------------------------------------------------------
 # Options
 #

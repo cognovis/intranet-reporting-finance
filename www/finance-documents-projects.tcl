@@ -136,6 +136,12 @@ set this_url [export_vars -base "/intranet-reporting-finance/finance-documents-p
 
 
 # ------------------------------------------------------------
+# Deal with invoices related to multiple projects
+
+im_invoices_check_for_multi_project_invoices
+
+
+# ------------------------------------------------------------
 # Conditional SQL Where-Clause
 #
 

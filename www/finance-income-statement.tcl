@@ -61,6 +61,12 @@ set this_url [export_vars -base "/intranet-reporting-finance/finance-income-stat
 
 
 # ------------------------------------------------------------
+# Deal with invoices related to multiple projects
+
+im_invoices_check_for_multi_project_invoices
+
+
+# ------------------------------------------------------------
 # Constants
 #
 

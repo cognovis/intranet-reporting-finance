@@ -77,6 +77,11 @@ Start Date is inclusive (document with effective date = Start Date or later),
 while End Date is exclusive (documents earlier then End Date, exclucing End Date).
 "
 
+# ------------------------------------------------------------
+# Deal with invoices related to multiple projects
+
+im_invoices_check_for_multi_project_invoices
+
 
 # ------------------------------------------------------------
 # Defaults
