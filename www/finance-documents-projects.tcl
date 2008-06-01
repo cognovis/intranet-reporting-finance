@@ -197,52 +197,27 @@ select
 	  , 2) as amount_converted,
 	c.amount,
 	c.currency,
-	r.object_id_one as project_id
+	r.project_id
 from
-	im_costs c
-	LEFT OUTER JOIN acs_rels r on (c.cost_id = r.object_id_two)
+	im_costs c,
+	(
+		select	c.cost_id, c.project_id
+		from	im_costs c
+	    UNION
+		select	c.cost_id, p.project_id
+		from	im_costs c,
+			acs_rels r,
+			im_projects p
+		where	r.object_id_two = c.cost_id and
+			r.object_id_one = p.project_id
+	) r
 where
-	c.cost_type_id in (3700, 3702, 3704, 3706)
+	c.cost_id = r.cost_id 
+	and c.cost_type_id in (3700, 3702, 3704, 3706)
 	and c.effective_date >= to_date(:start_date, 'YYYY-MM-DD')
 	and c.effective_date < to_date(:end_date, 'YYYY-MM-DD')
 	and c.effective_date::date < to_date(:end_date, 'YYYY-MM-DD')
 "
-
-
-
-# Deal with invoices related to multiple 
-set multiples_sql "
-	select
-		count(*) as cnt,
-		cost_id,
-		cost_name
-	from
-		($inner_sql) i,
-		im_projects p
-	where
-		i.project_id = p.project_id
-	group by
-		cost_id, cost_name
-	having
-		count(*) > 1
-"
-
-set errors ""
-db_foreach multiples $multiples_sql {
-    append errors "<li>Financial document <a href=[export_vars -base "/intranet-invoices/view" {{invoice_id $cost_id}}]>$cost_name</a> is associated with more then one project.\n"
-}
-
-if {"" != $errors} {
-    ad_return_complaint 1 "<p>Financial documents related to multiple projects currently cause errors in this report.</p>
-	<ul>$errors</ul><p>
-	Please assign every financial document to a single project (usually the main project).</p>\n"
-    return
-}
-
-
-
-
-
 
 
 set sql "
