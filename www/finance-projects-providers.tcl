@@ -13,7 +13,7 @@ ad_page_contract {
 } {
     { start_date "" }
     { end_date "" }
-    { level_of_detail 1 }
+    { level_of_detail 3 }
     { output_format "html" }
     project_id:integer,optional
     customer_id:integer,optional
@@ -53,9 +53,35 @@ if {"" != $end_date && ![regexp {[0-9][0-9][0-9][0-9]\-[0-9][0-9]\-[0-9][0-9]} $
     Expected format: 'YYYY-MM-DD'"
 }
 
-set page_title "Finance Provider's Report"
+set page_title "Finance Project's Provider Report"
 set context_bar [im_context_bar $page_title]
 set context ""
+set help_text "
+<strong>$page_title:</strong><br>
+The purpose of this report is to check the billing status
+for each Freelancer who participates in a project.
+<br>
+For this reason, we show for each freelancer:
+<ul>
+<li>The number of Purchase Orders
+<li>The sum of the Purchase Orders
+<li>The number of Provider Bills
+<li>The sum of the Provider Bills
+</ul>
+Please note that the indicated numbers may not be precise.
+The report asumes that each freelancer is the only member of
+their assoicated 'freelance company' (the legal person behind
+the freelancer).<br>
+In the case that two or more freelancers of the same company
+participate in the same project, the report will show duplicate
+numbers and sums. This is (unfortunately) a correct behaviour,
+because POs and Bills are not associated with individual users,
+but with the user's companies.
+<br>
+Start Date is inclusive (document with effective date = Start Date
+or later), while End Date is exclusive (documents earlier then
+End Date, exclucing End Date).
+"
 
 
 # ------------------------------------------------------------
@@ -193,13 +219,17 @@ set user_per_main_p_sql "
 				p.project_id = tt.project_id
 "
 
-# Get all cost items related to a specific person.
-set cost_query "
+# ad_return_complaint 1 "<pre>[im_ad_hoc_query $user_per_main_p_sql]</pre>"
+
+
+
+# Select out the number and amount of purchase orders for
+# each user per main project
+set user_bill_query "
 	select
-		c.cost_id,
-		c.amount,
-		c.cost_type_id,
-		tree_root_key(p.tree_sortkey) as tree_sortkey,
+		count(*) as bill_cnt,
+		sum(c.amount) as bill_amount,
+		tree_root_key(p.tree_sortkey) as sortkey,
 		pe.person_id as user_id
 	from
 		im_costs c,
@@ -208,229 +238,127 @@ set cost_query "
 		persons pe
 	where
 		c.project_id = p.project_id and
-		c.cost_type_id in (3704, 3706) and
+		c.cost_type_id = 3704 and
 		r.object_id_one = c.provider_id and
 		r.object_id_two = pe.person_id
+	group by
+		pe.person_id,
+		sortkey
+"
+
+# Select out the number and amount of purchase orders for
+# each user per main project
+set user_po_query "
+	select
+		count(*) as po_cnt,
+		sum(c.amount) as po_amount,
+		tree_root_key(p.tree_sortkey) as sortkey,
+		pe.person_id as user_id
+	from
+		im_costs c,
+		im_projects p,
+		acs_rels r,
+		persons pe
+	where
+		c.project_id = p.project_id and
+		c.cost_type_id = 3706 and
+		r.object_id_one = c.provider_id and
+		r.object_id_two = pe.person_id
+	group by
+		pe.person_id,
+		sortkey
 "
 
 
-
+# This main SQL connects the list of all members per project 
+# ([project, user_id] tupels) with the number and sum of
+# POs and Bills per [project, user_id]
 set sql "
 	select
-		c.amount,
-		main_p.project_id,
+		pos.po_cnt,
+		pos.po_amount,
+		bills.bill_cnt,
+		bills.bill_amount,
 		main_p.project_nr,
 		main_p.project_name,
+		cust.company_id as customer_id,
+		cust.company_path as customer_nr,
+		cust.company_name as customer_name,
+		main_p.project_id,
 		pe.person_id as user_id,
-		im_name_from_user_id(pe.person_id) as user_name,
-		c.cost_type_id
+		im_name_from_user_id(pe.person_id) as user_name
 	from
 		persons pe,
 		im_projects main_p,
+		im_companies cust,
 		($user_per_main_p_sql) r
-		LEFT OUTER JOIN ($cost_query) c ON (c.tree_sortkey = r.tree_sortkey and c.user_id = r.user_id)
+		LEFT OUTER JOIN ($user_po_query) pos ON (
+			r.tree_sortkey = pos.sortkey and 
+			r.user_id = pos.user_id
+		)
+		LEFT OUTER JOIN ($user_bill_query) bills ON (
+			r.tree_sortkey = bills.sortkey and 
+			r.user_id = bills.user_id
+		)
 	where
+		main_p.company_id = cust.company_id and
 		r.tree_sortkey = main_p.tree_sortkey and
-		r.user_id = pe.person_id
+		r.user_id = pe.person_id and
+		r.user_id in (
+			select member_id 
+			from group_distinct_member_map
+			where group_id in (select group_id from groups where group_name = 'Freelancers')
+		)
 	order by
+		customer_nr,
 		main_p.project_nr,
 		user_name
 "
 
 
-ad_return_complaint 1 "<pre>[im_ad_hoc_query $sql]</pre>"
+# ad_return_complaint 1 "<pre>[im_ad_hoc_query $sql]</pre>"
+
 
 
 set report_def [list \
     group_by customer_nr \
     header {
-	"\#colspan=10 <a href=$this_url&customer_id=$customer_id&level_of_detail=4 target=_blank><img src=/intranet/images/plus_9.gif width=9 height=9 border=0></a> 
+	"\#colspan=7 <a href=$this_url&customer_id=$customer_id&level_of_detail=4 target=_blank><img src=/intranet/images/plus_9.gif width=9 height=9 border=0></a> 
 	<b><a href=$company_url$customer_id>$customer_name</a></b>"
     } \
-        content [list \
-            group_by effective_month \
-            header { } \
-	    content [list \
-		    header {
-			$customer_nr
-			$provider_nr
-			$effective_date_formatted
-			$cost_name
-			"<nobr>$paid_amount_pretty</nobr>"
-			"<nobr>$invoice_amount_pretty</nobr>"
-			"<nobr>$quote_amount_pretty</nobr>"
-			"<nobr>$bill_amount_pretty</nobr>"
-			"<nobr>$po_amount_pretty</nobr>"
-		    } \
-		    content {} \
-	    ] \
-            footer {
+    content [list \
+	group_by project_nr \
+	header { 
+		"" 
+		"<b><a href=$project_url$project_id>$project_nr</a></b>"
+		"\#colspan=5 <b><a href=$project_url$project_id>$project_name</a></b>"
+	} \
+	content [list \
+		header {
+			""
+			""
+			"<a href=$user_url$user_id>$user_name</a>"
+			$po_cnt
+			$po_amount
+			$bill_cnt
+			$bill_amount
+		} \
+		content [list ]
+	] \
+	footer {
 		"" 
 		"" 
-                "\#colspan=1 <nobr><a href=$this_url&effective_date=$effective_date_formatted&level_of_detail=3 target=_blank><img src=/intranet/images/plus_9.gif width=9 height=9 border=0></a>
-                <i>$effective_date_formatted</i></nobr>"
-		"" 
-		"<i>$paid_month_total $default_currency</i>" 
-		"<i>$invoice_month_total $default_currency</i>" 
-		"<i>$quote_month_total $default_currency</i>" 
-		"<i>$bill_month_total $default_currency</i>" 
-		"<i>$po_month_total $default_currency</i>"
-            } \
+	} \
     ] \
     footer {
-	"" 
-	"" 
-	"" 
-	"<b>Subtotal:</b>" 
-	"<b>$paid_subtotal $default_currency</b>" 
-	"<b>$invoice_subtotal $default_currency</b>" 
-	"<b>$quote_subtotal $default_currency</b>" 
-	"<b>$bill_subtotal $default_currency</b>" 
-	"<b>$po_subtotal $default_currency</b>"
+	"company_footer" 
     } \
 ]
 
-set paid_total 0
-set invoice_total 0
-set quote_total 0
-set bill_total 0
-set po_total 0
-
 # Global header/footer
-set header0 {"Customer" "Provider" "Date" "Name" "Paid" "Invoice" "Quote" "Bill" "PO"}
-set footer0 {"" "" "" "<br><b>Total:</b>" "<br><b>$paid_total $default_currency</b>" "<br><b>$invoice_total $default_currency</b>" "<br><b>$quote_total $default_currency</b>" "<br><b>$bill_total $default_currency</b>" "<br><b>$po_total $default_currency</b>"}
-
-# invoice_amount can be empty (null), so let's add "+0",
-# which gets translated in a "0" if invoice_amount _is_ ""
-set paid_month_total_counter [list \
-        pretty_name "Paid Amount" \
-        var paid_month_total \
-        reset \$effective_month \
-        expr "\$paid_amount+0" \
-]
-
-set invoice_month_total_counter [list \
-        pretty_name "Invoice Amount" \
-        var invoice_month_total \
-        reset \$effective_month \
-        expr "\$invoice_amount+0" \
-]
-
-set quote_month_total_counter [list \
-        pretty_name "Quote Amount" \
-        var quote_month_total \
-        reset \$effective_month \
-        expr "\$quote_amount+0" \
-]
-
-set bill_month_total_counter [list \
-        pretty_name "Bill Amount" \
-        var bill_month_total \
-        reset \$effective_month \
-        expr "\$bill_amount+0" \
-]
-
-set po_month_total_counter [list \
-        pretty_name "Po Amount" \
-        var po_month_total \
-        reset \$effective_month \
-        expr "\$po_amount+0" \
-]
-
-
-set paid_subtotal_counter [list \
-        pretty_name "Paid Amount" \
-        var paid_subtotal \
-        reset \$customer_id \
-        expr "\$paid_amount+0" \
-]
-
-set invoice_subtotal_counter [list \
-        pretty_name "Invoice Amount" \
-        var invoice_subtotal \
-        reset \$customer_id \
-        expr "\$invoice_amount+0" \
-]
-
-set quote_subtotal_counter [list \
-        pretty_name "Quote Amount" \
-        var quote_subtotal \
-        reset \$customer_id \
-        expr "\$quote_amount+0" \
-]
-
-set bill_subtotal_counter [list \
-        pretty_name "Bill Amount" \
-        var bill_subtotal \
-        reset \$customer_id \
-        expr "\$bill_amount+0" \
-]
-
-set po_subtotal_counter [list \
-        pretty_name "Po Amount" \
-        var po_subtotal \
-        reset \$customer_id \
-        expr "\$po_amount+0" \
-]
-
-
-
-
-set paid_grand_total_counter [list \
-        pretty_name "Paid Amount" \
-        var paid_total \
-        reset 0 \
-        expr "\$paid_amount+0" \
-]
-
-set invoice_grand_total_counter [list \
-        pretty_name "Invoice Amount" \
-        var invoice_total \
-        reset 0 \
-        expr "\$invoice_amount+0" \
-]
-
-set quote_grand_total_counter [list \
-        pretty_name "Quote Amount" \
-        var quote_total \
-        reset 0 \
-        expr "\$quote_amount+0" \
-]
-
-set bill_grand_total_counter [list \
-        pretty_name "Bill Amount" \
-        var bill_total \
-        reset 0 \
-        expr "\$bill_amount+0" \
-]
-
-set po_grand_total_counter [list \
-        pretty_name "Po Amount" \
-        var po_total \
-        reset 0 \
-        expr "\$po_amount+0" \
-]
-
-
-
-
-set counters [list \
-	$paid_subtotal_counter \
-	$invoice_subtotal_counter \
-	$quote_subtotal_counter \
-	$bill_subtotal_counter \
-	$po_subtotal_counter \
-	$paid_month_total_counter \
-	$invoice_month_total_counter \
-	$quote_month_total_counter \
-	$bill_month_total_counter \
-	$po_month_total_counter \
-	$paid_grand_total_counter \
-	$invoice_grand_total_counter \
-	$quote_grand_total_counter \
-	$bill_grand_total_counter \
-	$po_grand_total_counter \
-]
+set header0 {"Customer" "Project" "User" "#POs" "&Sigma;POs" "#Bills" "&Sigma;Bills" }
+set footer0 {"" }
+set counters [list ]
 
 
 # ------------------------------------------------------------
@@ -456,7 +384,10 @@ switch $output_format {
 	ns_write "
 	[im_header]
 	[im_navbar]
-	<form>
+	<table cellspacing=0 cellpadding=0 border=0>
+	<tr valign=top>
+	<td>
+		<form>
                [export_form_vars customer_id]
 		<table border=0 cellspacing=1 cellpadding=1>
 		<tr>
@@ -465,6 +396,7 @@ switch $output_format {
 		    [im_select -translate_p 0 level_of_detail $levels $level_of_detail]
 		  </td>
 		</tr>
+<!--
 		<tr>
 		  <td class=form-label>Start Date</td>
 		  <td class=form-widget>
@@ -477,6 +409,7 @@ switch $output_format {
 		    <input type=textfield name=end_date value=$end_date>
 		  </td>
 		</tr>
+-->
                 <tr>
                   <td class=form-label>Format</td>
                   <td class=form-widget>
@@ -488,7 +421,17 @@ switch $output_format {
 		  <td class=form-widget><input type=submit value=Submit></td>
 		</tr>
 		</table>
-	</form>
+		</form>
+	</td>
+	<td>
+		<table cellspacing=2 width=90%>
+		<tr><td>$help_text</td></tr>
+		</table>
+	</td>
+	</tr>
+	</table>
+
+
 	<table border=0 cellspacing=1 cellpadding=1>\n"
     }
 }
