@@ -219,6 +219,8 @@ from
 where
 	c.cost_type_id = 3722
 	$where_clause 
+order by 
+	c.provider_id
 "
 
 set total 0
