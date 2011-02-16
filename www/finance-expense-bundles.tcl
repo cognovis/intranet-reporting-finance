@@ -109,6 +109,7 @@ if {"" == $end_date} {
 }
 
 set expense_url "/intranet-expenses/new?form_mode=display&expense_id="
+set expense_bundle_url "/intranet-expenses/bundle-new?form_mode=display&bundle_id="
 set user_url "/intranet/users/view?user_id="
 
 set this_url [export_vars -base "/intranet-reporting-finance/finance-expense-bundles" {start_date end_date project_id} ]
@@ -264,14 +265,14 @@ append report_def_string "header {\"\\#colspan=11 \$employee_name\" } \ "
 append report_def_string "content \ "
 append report_def_string "{header {"
 append report_def_string "\"\" "
-append report_def_string "                                    \"\$cost_name\""
+append report_def_string "                                    \"<a href='\$expense_bundle_url\$cost_id'>\$cost_name</a>\""
 append report_def_string "                                     \"\$sum_amount_reimbursable\""
 append report_def_string "                                     \"\$amount_incl_vat\" "
 append report_def_string $currency_var_columns
 append report_def_string "                                 } \ "
 append report_def_string "                                content {} \ "
 append report_def_string "                                 footer {} \ "
-append report_def_string "                  } footer {  \"\#colspan=2\" \"\\#colspan=1 \$total_amount_reimbursable\" \"\$total_amount\" } \ "
+append report_def_string "                  } footer {  \"\#colspan=2\" \"\\#colspan=1 <b>\$total_amount_reimbursable</b>\" \"<b>\$total_amount</b>\" } \ "
 
 set report_def $report_def_string
 
