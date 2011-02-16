@@ -237,7 +237,7 @@ set header0_string "\"Employee\" \"Bundle\" \"Owed to employee\" \"Total\" "
 append header0_string $currency_columns 
 set header0 $header0_string
 
-set footer0 { }
+set footer0 { "\\#colspan=2" "<b>$total_amount_reimbursable</b>" "<b>$total_amount</b>"  }
 
 set total_amount_reimbursable_counter [list \
         pretty_name "Total Amount Reimbursable" \
@@ -272,7 +272,7 @@ append report_def_string $currency_var_columns
 append report_def_string "                                 } \ "
 append report_def_string "                                content {} \ "
 append report_def_string "                                 footer {} \ "
-append report_def_string "                  } footer {  \"\#colspan=2\" \"\\#colspan=1 <b>\$total_amount_reimbursable</b>\" \"<b>\$total_amount</b>\" } \ "
+append report_def_string "                  } footer { } \ "
 
 set report_def $report_def_string
 
