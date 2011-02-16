@@ -183,6 +183,19 @@ select
 		select 
 			e.expense_id, 
 			e.reimbursable,
+			CASE e.reimbursable = 0
+	                WHEN true THEN
+                        (select
+                                round((
+                                        select round(
+                                                (co.amount * (1 + co.vat / 100)) * im_exchange_rate(co.effective_date::date, co.currency, '$def_curr')
+                                        :: numeric, 2)
+                                        from im_costs co
+                                        where co.cost_id = e.expense_id
+                                        ) * 0 :: numeric, 2
+                                )
+                        ) 
+	                ELSE
 			(select 
 				round((
 					select round(
@@ -192,7 +205,8 @@ select
 					where co.cost_id = e.expense_id
 					) * (e.reimbursable/100) :: numeric, 2
 				)
-			) as amount_reimbursable 
+			) 
+			END as amount_reimbursable
 		from 
 			im_expenses e
 		where 
@@ -229,8 +243,17 @@ set total_amount_reimbursable_counter [list \
         expr "\$sum_amount_reimbursable+0" \
 ]
 
+set total_amount_counter [list \
+        pretty_name "Total Amount" \
+        var total_amount \
+        reset 0 \
+        expr "\$amount_incl_vat+0" \
+]
+
+
 set counters [list \
 	$total_amount_reimbursable_counter \
+        $total_amount_counter \
 ]
 
 set report_def_string ""
@@ -246,7 +269,7 @@ append report_def_string $currency_var_columns
 append report_def_string "                                 } \ "
 append report_def_string "                                content {} \ "
 append report_def_string "                                 footer {} \ "
-append report_def_string "                  } footer {} \ "
+append report_def_string "                  } footer {  \"\#colspan=2\" \"\\#colspan=1 \$total_amount_reimbursable\" \"\$total_amount\" } \ "
 
 set report_def $report_def_string
 
@@ -318,7 +341,7 @@ switch $output_format {
 	</tr>
 	</table>
 	
-	<table border=0 cellspacing=1 cellpadding=1>\n"
+	<table border=0 cellspacing=3 cellpadding=3>\n"
     }
 }
 	
