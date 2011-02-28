@@ -59,6 +59,7 @@ if {"" != $end_date && ![regexp {^[0-9][0-9][0-9][0-9]\-[0-9][0-9]\-[0-9][0-9]$}
     Expected format: 'YYYY-MM-DD'"
 }
 
+
 # ------------------------------------------------------------
 # Page Settings
 
@@ -174,7 +175,7 @@ set def_curr [parameter::get -package_id [apm_package_id_from_key intranet-cost]
 set sql "
 select 
 	c.cost_id,
-	c.cost_name, 
+	'#' || c.cost_id || '-' || c.cost_name as cost_name, 
 	c.provider_id as employee_id,
 	(select im_name_from_user_id(c.provider_id)) as employee_name,
 	(select round((c.amount * (1 + c.vat / 100)):: numeric,2)) as amount_incl_vat,
@@ -224,13 +225,17 @@ order by
 	c.provider_id
 "
 
+
+# -------------------------------------------------------------------------------------------------
+# Default Settings
+
 set total 0
 set employee_subtotal 0
 set employee_subtotal_vat_reimburse 0
 
 # -------------------------------------------------------------------------------------------------
-	
 # Global header/footer
+
 set header0 {"Employee" "Bundle" "Owed to employee" "Total" "AUD" "CAD" "CHF" "EUR" "GBP" "JPY" "USD"}
 
 set header0_string "\"Employee\" \"Bundle\" \"Owed to employee\" \"Total\" "
