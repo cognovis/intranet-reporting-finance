@@ -10,8 +10,8 @@ ad_page_contract {
     @param start_year Year to start the report
     @param start_unit Month or week to start within the start_year
 } {
-    { start_date "2010-01-01" }
-    { end_date "2012-01-01" }
+    { form_start_date "" }
+    { form_end_date "" }
     { output_format "html" }
     { cost_status_id "3802" }
     { employee_id "" }
@@ -46,18 +46,21 @@ if {[catch {
     return
 }
 
-# Check that Start & End-Date have correct format
-if {"" != $start_date && ![regexp {^[0-9][0-9][0-9][0-9]\-[0-9][0-9]\-[0-9][0-9]$} $start_date]} {
+if {"" == $form_start_date} { set form_start_date [lc_time_fmt [parameter::get_from_package_key -package_key "intranet-cost" -parameter DefaultStartDate -default "2010-01-01"] "%x" locale] }
+if {"" == $form_end_date}   { set form_end_date   [lc_time_fmt [parameter::get_from_package_key -package_key "intranet-cost" -parameter DefaultEndDate   -default "2020-01-01"] "%x" locale] }
+
+if { ![validate_textdate [textdate_to_ansi $form_start_date]]} {
     ad_return_complaint 1 "Start Date doesn't have the right format.<br>
-    Current value: '$start_date'<br>
-    Expected format: 'YYYY-MM-DD'"
+    Current value: '$form_start_date'"
 }
 
-if {"" != $end_date && ![regexp {^[0-9][0-9][0-9][0-9]\-[0-9][0-9]\-[0-9][0-9]$} $end_date]} {
+if { ![validate_textdate [textdate_to_ansi $form_end_date]]} {
     ad_return_complaint 1 "End Date doesn't have the right format.<br>
-    Current value: '$end_date'<br>
-    Expected format: 'YYYY-MM-DD'"
+    Current value: '$form_end_date'"
 }
+
+set start_date [textdate_to_ansi $form_start_date]
+set end_date [textdate_to_ansi $form_end_date]
 
 
 # ------------------------------------------------------------
@@ -67,14 +70,12 @@ set page_title "Expense Bundles"
 set context_bar [im_context_bar $page_title]
 set context ""
 
-set help_text "
-"
+set help_text ""
 
 # ------------------------------------------------------------
 # Defaults
 
 set level_of_detail 2
-
 set rowclass(0) "roweven"
 set rowclass(1) "rowodd"
 
@@ -83,31 +84,6 @@ set days_in_past 7
 set default_currency [ad_parameter -package_id [im_package_cost_id] "DefaultCurrency" "" "EUR"]
 set cur_format [im_l10n_sql_currency_format]
 set date_format [im_l10n_sql_date_format]
-
-db_1row todays_date "
-select
-	to_char(sysdate::date - :days_in_past::integer, 'YYYY') as todays_year,
-	to_char(sysdate::date - :days_in_past::integer, 'MM') as todays_month,
-	to_char(sysdate::date - :days_in_past::integer, 'DD') as todays_day
-from dual
-"
-
-if {"" == $start_date} {
-    set start_date "$todays_year-$todays_month-01"
-}
-
-
-db_1row end_date "
-select
-	to_char(to_date(:start_date, 'YYYY-MM-DD') + 31::integer, 'YYYY') as end_year,
-	to_char(to_date(:start_date, 'YYYY-MM-DD') + 31::integer, 'MM') as end_month,
-	to_char(to_date(:start_date, 'YYYY-MM-DD') + 31::integer, 'DD') as end_day
-from dual
-"
-
-if {"" == $end_date} {
-    set end_date "$end_year-$end_month-01"
-}
 
 set expense_url "/intranet-expenses/new?form_mode=display&expense_id="
 set expense_bundle_url "/intranet-expenses/bundle-new?form_mode=display&bundle_id="
@@ -242,6 +218,10 @@ set header0_string "\"Employee\" \"Bundle\" \"Owed to employee\" \"Total\" "
 append header0_string $currency_columns 
 set header0 $header0_string
 
+set total_amount_reimbursable ""
+set total_amount ""
+
+
 set footer0 { "\\#colspan=2" "<b>$total_amount_reimbursable</b>" "<b>$total_amount</b>"  }
 
 set total_amount_reimbursable_counter [list \
@@ -313,13 +293,13 @@ switch $output_format {
 		<tr>
 		  <td class=form-label>Start Date</td>
 		  <td class=form-widget>
-		    <input type=textfield name=start_date value=$start_date>
+		    <input type=textfield name=form_start_date value=$form_start_date>
 		  </td>
 		</tr>
 		<tr>
 		  <td class=form-label>End Date</td>
 		  <td class=form-widget>
-		    <input type=textfield name=end_date value=$end_date>
+		    <input type=textfield name=form_end_date value=$form_end_date>
 		  </td>
 		</tr>
                 <tr>
