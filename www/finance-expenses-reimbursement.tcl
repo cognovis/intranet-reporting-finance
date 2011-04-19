@@ -73,8 +73,7 @@ set context ""
 set help_text "
 <strong>Expenses:</strong><br>
 
-This report shows all expenses in the system in a given period,
-grouped by Group Style.
+This report shows all expenses in the system in a given period.
 "
 
 
@@ -249,8 +248,6 @@ switch $group_style {
 
 set def_curr [parameter::get -package_id [apm_package_id_from_key intranet-cost] -parameter "DefaultCurrency" -default 'EUR']
 
-#	-- to_char(((cc.amount_converted * c.vat/100) + c.amount)*e.reimbursable/100,:cur_format) as amount_reimbursable_converted,
-
 set sql "
 select
 	cc.*,
@@ -295,7 +292,6 @@ where
 order by
 	$order_by_clause
 "
-
 
 set total 0
 set employee_subtotal 0
@@ -355,12 +351,12 @@ switch $group_style {
 				] \
 				footer {
 					"\#colspan=9"
-					"\#colspan=3 <nobr><i>$employee_subtotal</i></nobr>"
+					"\#colspan=3 <nobr><i>$employee_subtotal $default_currency</i></nobr>"
 				} \
 			] \
 			footer {
 				"\#colspan=9"
-				"\#colspan=3 <nobr><b>$project_subtotal</b></nobr>"
+				"\#colspan=3 <nobr><b>$project_subtotal $default_currency</b></nobr>"
 			} \
 		] \
 		footer {  } \
@@ -374,20 +370,20 @@ switch $group_style {
 	        pretty_name "Invoice Amount" \
 	        var project_subtotal \
 	        reset "\$customer_id+\$project_id" \
-	        expr "\$amount+0" \
+	        expr "\$amount_reimbursable_converted+0" \
 	]
 	
 	set employee_subtotal_counter [list \
 	        pretty_name "Invoice Amount" \
 	        var employee_subtotal \
 	        reset "\$customer_id+\$project_id+\$employee_id" \
-	        expr "\$amount+0" \
+	        expr "\$amount_reimbursable_converted+0" \
 	]
 	set project_grand_total_counter [list \
 	        pretty_name "Invoice Amount" \
 	        var project_total \
 	        reset 0 \
-	        expr "\$amount+0" \
+	        expr "\$amount_reimbursable_converted+0" \
 	]
 	
 	set counters [list \
@@ -449,12 +445,12 @@ switch $group_style {
 				] \
 				footer {
 					"\#colspan=10"
-					"\#colspan=3 <nobr><i>$exptype_subtotal</i></nobr>"
+					"\#colspan=3 <nobr><i>$exptype_subtotal $default_currency</i></nobr>"
 				} \
 			] \
 			footer {
 				"\#colspan=10"
-				"\#colspan=3 <nobr><b>$project_subtotal</b></nobr>"
+				"\#colspan=3 <nobr><b>$project_subtotal $default_currency</b></nobr>"
 			} \
 		] \
 		footer {  } \
@@ -533,28 +529,33 @@ switch $group_style {
 						"$expense_type"
 						"$external_company_name"
 						"$expense_payment_type"
-                                                "<nobr>$amount_incl_vat_formatted $currency</nobr>"
-						"$reimbursable"
-					        "$amount_reimbursable $currency"
-                                                "$amount_reimbursable_converted $default_currency"
+                                                "\#align='right' <nobr>$amount_incl_vat_formatted $currency</nobr>"
+						"\#align='center' $reimbursable"
+					        "\#align='right' $amount_reimbursable $currency"
+                                                "\#align='right' $amount_reimbursable_converted $default_currency"
 						"$note"
 					} \
 					content {} \
 				] \
 				footer {
-					"\#colspan=6"
-					"\#colspan=3 <nobr>Project:<br> <i>$project_subtotal</i></nobr><br><br>"
+					"\#colspan=3"
+				        "\#colspan=7 <nobr><b>Total Project</b>"
+					"\#align='right' <b>$project_subtotal $default_currency</b></nobr><br><br>"
 				} \
 			] \
 			footer {
-				"\#colspan=6"
-				"\#colspan=3 <nobr>Customer:<br> <b>$customer_subtotal</b></nobr>"
+                                        "\#colspan=1"
+                                        "\#colspan=9 <nobr><b>Total Customer</b></nobr>"
+                                        "\#align='right' <nobr><b>$customer_subtotal $default_currency</b></nobr><br><br>"
 			} \
 		] \
 		footer {  
-			"\#colspan=6"
-			"\#colspan=4 <br><br>-----<br><nobr>Employee:<br> <b>$employee_subtotal</b></nobr>"
-			"\#colspan=3 <br><br>-----<br><nobr>Employee:<br> <b>$employee_subtotal_vat_reimburse</b></nobr>"
+
+                         "<nobr><b>Total Employee</b></nobr>"
+			 "\#colspan=6"
+                         "\#align='right' <nobr><b>$employee_subtotal $default_currency</b></nobr><br><br>"
+                         "\#colspan=2"
+                         "\#align='right' <nobr><b>$employee_subtotal_vat_reimburse $default_currency</b></nobr>"
 		} \
 	]
 
@@ -574,19 +575,19 @@ switch $group_style {
 	        pretty_name "Invoice Amount" \
 	        var employee_subtotal \
 	        reset "\$employee_id" \
-	        expr "\$amount+0" \
+	        expr "\$amount_reimbursable_converted+0" \
 	]
 	set customer_subtotal_counter [list \
 	        pretty_name "Invoice Amount" \
 	        var customer_subtotal \
 	        reset "\$employee_id+\$project_customer_id" \
-	        expr "\$amount+0" \
+	        expr "\$amount_reimbursable_converted+0" \
 	]
 	set project_subtotal_counter [list \
 	        pretty_name "Invoice Amount" \
 	        var project_subtotal \
 	        reset "\$employee_id+\$project_customer_id+\$project_id" \
-	        expr "\$amount+0" \
+	        expr "\$amount_reimbursable_converted+0" \
 	]
 	set counters [list \
 		$employee_subtotal_vat_reimburse_counter \
@@ -705,7 +706,7 @@ switch $output_format {
 	</td>
 	</tr>
 	</table>
-	
+<br><br>	
 	<table border=0 cellspacing=1 cellpadding=1>\n"
     }
 }
@@ -802,26 +803,38 @@ db_foreach sql $sql {
 
 	if { [info exists curr_hash($employee_id,$curr_idx) ] } {
 		# ad_return_complaint 1 "$employee_id $curr_idx $curr_hash($employee_id,$curr_idx)"
-		set curr_hash($employee_id,$curr_idx) [expr $curr_hash($employee_id,$curr_idx) + $amount_reimbursable]
+		set curr_hash($employee_id,$curr_idx) [expr $curr_hash($employee_id,$curr_idx) + $amount_reimbursable + 0]
 	} else {
-                set curr_hash($employee_id,$curr_idx) $amount_reimbursable
+	    set curr_hash($employee_id,$curr_idx) [expr $amount_reimbursable +0]
 	}
 }
 
 set reimbursement_output_table "-----------------------------------------------------------------------------------<br><h2>&nbsp;&nbsp;&nbsp;&nbsp;Reimbursement Employee/Currency:</h2>"
+append reimbursement_output_table "<table cellpadding='3' cellspacing='3' border='0'>" 
 set bak_key "" 
 
-foreach key [array names curr_hash] { 
-	#get current value with $curr_hash($key)
-	if {$bak_key == $key} {
-		set employee_id ""	
-	} else {
-		set employee_id [string range $key 0 [expr [string first "," $key]-1]]  
-	}
-	set employee_name [im_name_from_user_id $employee_id]
-	append reimbursement_output_table "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$employee_name: $curr_hash($key)&nbsp;[lindex $currency_list [string range $key [expr [string first "," $key]+1] [string length $key]]]<br>" 
-	set bak_key $key
+set employee_name_bak ""
+
+foreach key [array names curr_hash] {
+        #get current value with $curr_hash($key)
+    if {$bak_key == $key} {
+                set employee_id ""
+    } else {
+	set employee_id [string range $key 0 [expr [string first "," $key]-1]]
+    }
+    set employee_name [im_name_from_user_id $employee_id]
+    if { $employee_name_bak == $employee_name } {set employee_name ""}
+    append reimbursement_output_table "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;</td>"
+    append reimbursement_output_table "<td><b>$employee_name</b></td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>" 
+    append reimbursement_output_table "<td align='right'>[im_numeric_add_trailing_zeros [expr $curr_hash($key)+0] 2]</td>"
+    append reimbursement_output_table "<td>[lindex $currency_list [string range $key [expr [string first "," $key]+1] [string length $key]]]</td></tr>"
+
+
+        set bak_key $key
+        set employee_name_bak $employee_name
 }
+
+append reimbursement_output_table "</table>"
 
 im_report_display_footer \
     -output_format $output_format \
