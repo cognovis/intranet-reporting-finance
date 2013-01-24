@@ -358,9 +358,7 @@ select
 	to_char(p.end_date, :date_format) as end_date_formatted,
 	to_char(p.start_date, :date_format) as start_date_formatted,
 	'<a href=/intranet/users/view?user_id=' || p.company_contact_id || '>' || 
-		im_name_from_user_id(p.company_contact_id) || '</a>' as company_contact_link,
-	im_category_from_id(p.source_language_id) as source_language,
-	im_category_from_id(p.subject_area_id) as subject_area
+		im_name_from_user_id(p.company_contact_id) || '</a>' as company_contact_link
 
         $deref_extra_select
 from
@@ -617,8 +615,6 @@ set field_options [concat $field_options {
 	start_date_formatted "Project - End Date"
 	company_contact_link "Project - Customer Contact"
 	company_project_nr "Project - Customer's Project Nr"
-	source_language "Project - Source Language"
-	subject_area "Project - Subject Area"	
 	final_company "Project - Final Company"
 	reported_hours_cache "Project - Reported Hours"
 	cost_quotes_cache "Project - Quotes"
