@@ -232,7 +232,7 @@ where
 	1 = 1
 	$where_clause
 order by
-	pcust.company_name,
+	customer_id,
 	p.project_name
 "
 
@@ -460,10 +460,17 @@ set class "rowodd"
 ns_log Notice "intranet-reporting-finance/finance-payment-balance: sql=\n$sql"
 
 db_foreach sql $sql {
-
-	if {"" == $project_id} {
+  
+	if { "" == $project_id || "" == $project_name } {
 	    set project_id 0
-	    set project_name [lang::message::lookup "" intranet-reporting.No_project "Undefined Project"]
+	    set help_txt [lang::message::lookup "" intranet-reporting.ProjectDeleted "The project might have been removed from the system"]
+	    set project_name "[lang::message::lookup "" intranet-reporting.No_project "Undefined Project"] [im_gif help $help_txt]"
+	}
+
+	if {"" == $customer_id} {
+	    set customer_id 0
+	    set help_txt [lang::message::lookup "" intranet-reporting.CustomerDeleted "The customer might have been removed from the system"]
+	    set project_customer_name "[lang::message::lookup "" intranet-reporting.NoCustomer "Undefined Customer"] [im_gif help $help_txt]"
 	}
 
 	im_report_display_footer \
