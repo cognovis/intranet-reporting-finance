@@ -294,8 +294,8 @@ im_invoices_check_for_multi_project_invoices
 
 # ------------------------------------------------------------
 #
-set deref_list [im_dynfield_object_attributes_derefs -object_type "im_company" -prefix "cust."]
-set deref_list [concat $deref_list [im_dynfield_object_attributes_derefs -object_type "im_project" -prefix "p."]]
+set deref_list [im_dynfield::object_attributes_derefs -object_type "im_company" -prefix "cust."]
+set deref_list [concat $deref_list [im_dynfield::object_attributes_derefs -object_type "im_project" -prefix "p."]]
 set deref_extra_select [join $deref_list ",\n\t"]
 if {"" != $deref_extra_select} { set deref_extra_select ",\n\t$deref_extra_select" }
 
@@ -602,7 +602,7 @@ set field_options {
 	project_customer_type "Company - Company Type"
 	project_customer_manager_link "Company - Key Account"
 }
-set field_options [concat $field_options [im_dynfield_object_attributes_for_select -object_type "im_company"]]
+set field_options [concat $field_options [im_dynfield::object_attributes_for_select -object_type "im_company"]]
 
 set field_options [concat $field_options {
 	project_status "Project - Project Status"
@@ -625,7 +625,7 @@ set field_options [concat $field_options {
 	cost_expense_logged_cache "Project - Exenses"
 	cost_delivery_notes_cache "Project - Delivery Notes"
 }]
-set field_options [concat $field_options [im_dynfield_object_attributes_for_select -object_type "im_project"]]
+set field_options [concat $field_options [im_dynfield::object_attributes_for_select -object_type "im_project"]]
 
 
 set location_options {"" ""}
