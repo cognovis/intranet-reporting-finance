@@ -17,6 +17,7 @@ ad_page_contract {
     { output_format "html" }
     { number_locale "" }
     { customer_id:integer 0}
+    { rounding_precision:integer 2}
 }
 
 # ------------------------------------------------------------
@@ -101,21 +102,12 @@ set context ""
 
 set help_text "
 <strong>Income Statement:</strong><br>
-
-This report provides a basic income statement to be used for 
-quarterly financial reporting.
-
-All financial items are considerted with effective_date 
-between start date and end date.
-
-<br>
-Start Date is inclusive (document with effective date = Start Date
-or later), while End Date is exclusive (documents earlier then 
-End Date, exclucing End Date).
-<br>
+<ul>
+<li>This report provides a basic income statement to be used for financial reporting for a given period.</li>
+<li>All financial items are considered with effective_date between start date and end date.</li>
+<li>Start Date is inclusive (document with effective date = Start Date or later), while End Date is exclusive (documents earlier then End Date, exclucing End Date).</li>
+</ul>
 "
-
-
 
 # ------------------------------------------------------------
 # Set the default start and end date
@@ -611,14 +603,21 @@ set class "rowodd"
 ns_log Notice "intranet-reporting-finance/finance-income-statement: sql=\n$sql"
 
 db_foreach sql $sql {
-    
-    set invoice_amount_pretty [im_report_format_number $invoice_amount $output_format $number_locale]
-    set bill_amount_pretty [im_report_format_number $bill_amount $output_format $number_locale]
-    set expense_amount_pretty [im_report_format_number $expense_amount $output_format $number_locale]
-    set vat_amount_pretty [im_report_format_number $vat_amount $output_format $number_locale]
-    set tax_amount_pretty [im_report_format_number $tax_amount $output_format $number_locale]
-    set paid_amount_pretty [im_report_format_number $paid_amount $output_format $number_locale]
-    
+
+    if { "" == $invoice_amount } { set invoice_amount 0}
+    if { "" == $bill_amount } { set bill_amount 0}
+    if { "" == $expense_amount } { set expense_amount 0}
+    if { "" == $vat_amount } { set vat_amount 0}
+    if { "" == $tax_amount } { set tax_amount 0}
+    if { "" == $paid_amount } { set paid_amount 0}
+
+    set invoice_amount_pretty [lc_numeric $invoice_amount %.${rounding_precision}f $number_locale]
+    set bill_amount_pretty [lc_numeric $bill_amount %.${rounding_precision}f $number_locale]
+    set expense_amount_pretty [lc_numeric $expense_amount %.${rounding_precision}f $number_locale]
+    set vat_amount_pretty [lc_numeric $vat_amount %.${rounding_precision}f $number_locale]
+    set tax_amount_pretty [lc_numeric $tax_amount %.${rounding_precision}f $number_locale]
+    set paid_amount_pretty [lc_numeric $paid_amount %.${rounding_precision}f $number_locale]
+
     if {"" == $customer_id} {
 	set customer_id 0
 	set customer_name [lang::message::lookup "" intranet-reporting.No_customer "Undefined Customer"]
@@ -646,28 +645,27 @@ db_foreach sql $sql {
     # Update Counters and calculate pretty counter values
     im_report_update_counters -counters $counters
 
-    set paid_custsubtotal_pretty [im_report_format_number $paid_custsubtotal $output_format $number_locale]
-    set invoice_custsubtotal_pretty [im_report_format_number $invoice_custsubtotal $output_format $number_locale]
-    set bill_custsubtotal_pretty [im_report_format_number $bill_custsubtotal $output_format $number_locale]
-    set expense_custsubtotal_pretty [im_report_format_number $expense_custsubtotal $output_format $number_locale]
-    set tax_custsubtotal_pretty [im_report_format_number $tax_custsubtotal $output_format $number_locale]
-    set vat_custsubtotal_pretty [im_report_format_number $vat_custsubtotal $output_format $number_locale]
+    set paid_custsubtotal_pretty [lc_numeric $paid_custsubtotal %.${rounding_precision}f $number_locale]
+    set invoice_custsubtotal_pretty [lc_numeric $invoice_custsubtotal %.${rounding_precision}f $number_locale]
+    set bill_custsubtotal_pretty [lc_numeric $bill_custsubtotal %.${rounding_precision}f $number_locale]
+    set expense_custsubtotal_pretty [lc_numeric $expense_custsubtotal %.${rounding_precision}f $number_locale]
+    set tax_custsubtotal_pretty [lc_numeric $tax_custsubtotal %.${rounding_precision}f $number_locale]
+    set vat_custsubtotal_pretty [lc_numeric $vat_custsubtotal %.${rounding_precision}f $number_locale]
 
-    set paid_subtotal_pretty [im_report_format_number $paid_subtotal $output_format $number_locale]
-    set invoice_subtotal_pretty [im_report_format_number $invoice_subtotal $output_format $number_locale]
-    set bill_subtotal_pretty [im_report_format_number $bill_subtotal $output_format $number_locale]
-    set expense_subtotal_pretty [im_report_format_number $expense_subtotal $output_format $number_locale]
-    set tax_subtotal_pretty [im_report_format_number $tax_subtotal $output_format $number_locale]
-    set vat_subtotal_pretty [im_report_format_number $vat_subtotal $output_format $number_locale]
+    set paid_subtotal_pretty [lc_numeric $paid_subtotal %.${rounding_precision}f $number_locale]
+    set invoice_subtotal_pretty [lc_numeric $invoice_subtotal %.${rounding_precision}f $number_locale]
+    set bill_subtotal_pretty [lc_numeric $bill_subtotal %.${rounding_precision}f $number_locale]
+    set expense_subtotal_pretty [lc_numeric $expense_subtotal %.${rounding_precision}f $number_locale]
+    set tax_subtotal_pretty [lc_numeric $tax_subtotal %.${rounding_precision}f $number_locale]
+    set vat_subtotal_pretty [lc_numeric $vat_subtotal %.${rounding_precision}f $number_locale]
 
-    set paid_total_pretty [im_report_format_number $paid_total $output_format $number_locale]
-    set invoice_total_pretty [im_report_format_number $invoice_total $output_format $number_locale]
-    set bill_total_pretty [im_report_format_number $bill_total $output_format $number_locale]
-    set expense_total_pretty [im_report_format_number $expense_total $output_format $number_locale]
-    set tax_total_pretty [im_report_format_number $tax_total $output_format $number_locale]
-    set vat_total_pretty [im_report_format_number $vat_total $output_format $number_locale]
+    set paid_total_pretty [lc_numeric $paid_total %.${rounding_precision}f $number_locale]
+    set invoice_total_pretty [lc_numeric $invoice_total %.${rounding_precision}f $number_locale]
+    set bill_total_pretty [lc_numeric $bill_total %.${rounding_precision}f $number_locale]
+    set expense_total_pretty [lc_numeric $expense_total %.${rounding_precision}f $number_locale]
+    set tax_total_pretty [lc_numeric $tax_total %.${rounding_precision}f $number_locale]
+    set vat_total_pretty [lc_numeric $vat_total %.${rounding_precision}f $number_locale]
 
-    
     set last_value_list [im_report_render_header \
 	    -output_format $output_format \
 	    -group_def $report_def \
@@ -709,18 +707,14 @@ switch $output_format {
     html { 
 	ns_write "
 		<tr><td colspan=9>&nbsp;</td></tr>
-		<tr><td colspan=8 align=right>Total Earning</td><td>$invoice_total</td></tr>
-		<tr><td colspan=8 align=right>Total Expenses</td><td>[expr $bill_total + $expense_total]</td></tr>
-		<tr><td colspan=8 align=right>Profit</td><td>[expr $invoice_total - $bill_total - $expense_total]</td></tr>
-		<tr><td colspan=8 align=right>Retained IRPF</td><td>[expr -1 * $tax_total]</td></tr>
-		<tr><td colspan=8 align=right>EBT (Earning before TAX)</td><td>[expr $invoice_total - $bill_total - $expense_total + $tax_total]</td></tr>
+		<tr><td colspan=8 align=right>Total Earning</td><td>[lc_numeric $invoice_total %.${rounding_precision}f $number_locale]</td></tr>
+		<tr><td colspan=8 align=right>Total Expenses</td><td>[lc_numeric [expr $bill_total + $expense_total] %.${rounding_precision}f $number_locale]</td></tr>
+		<tr><td colspan=8 align=right>Profit</td><td>[lc_numeric [expr $invoice_total - $bill_total - $expense_total] %.${rounding_precision}f $number_locale]</td></tr>
+		<tr><td colspan=8 align=right>Retained IRPF</td><td>[lc_numeric [expr -1 * $tax_total] %.${rounding_precision}f $number_locale]</td></tr>
+		<tr><td colspan=8 align=right>EBT (Earning before TAX)</td><td>[lc_numeric [expr $invoice_total - $bill_total - $expense_total + $tax_total] %.${rounding_precision}f $number_locale]</td></tr>
 		<tr><td colspan=9>&nbsp;</td></tr>
-
 		<tr><td colspan=8 align=right>VAT Debt</td><td>$vat_total_pretty</td></tr>
-
-
 	" 
-
 	ns_write "</table>\n[im_footer]\n" 
     }
 }
