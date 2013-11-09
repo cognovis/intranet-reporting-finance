@@ -16,6 +16,8 @@ ad_page_contract {
     { output_format "html" }
     { group_style "cust_proj_emp" }
     { show_complete_note 0 }
+    { number_locale "" }
+    { rounding_precision:integer 2}
     project_id:integer,optional
     customer_id:integer,optional
 }
@@ -99,6 +101,10 @@ set days_in_past 7
 set default_currency [ad_parameter -package_id [im_package_cost_id] "DefaultCurrency" "" "EUR"]
 set cur_format [im_l10n_sql_currency_format]
 set date_format [im_l10n_sql_date_format]
+
+set locale [lang::user::locale]
+if {"" == $number_locale} { set number_locale $locale  }
+
 
 db_1row todays_date "
 select
@@ -246,7 +252,9 @@ select
 	to_char(cc.effective_date, :date_format) as effective_date_formatted,
 	to_char(cc.effective_date, 'YYMM')::integer * cc.customer_id as effective_month,
 	to_char(c.vat, '990') as vat_formatted,
+	c.amount as amount_unformatted,
 	to_char(c.amount, :cur_format) as amount_formatted,
+	cc.amount_converted as amount_converted_unformatted,
 	to_char(cc.amount_converted, :cur_format) as amount_converted_formatted,
 	to_char(o.creation_date, :date_format) as cost_creation_date_formatted,
 	cust.company_path as customer_nr,
@@ -280,7 +288,14 @@ order by
 
 
 set total 0
+set project_total 0
+set project_subtotal 0
+set customer_total 0
+set customer_subtotal 0
+set employee_total 0
 set employee_subtotal 0
+set exptype_subtotal 0
+set exptype_total 0
 
 
 switch $group_style {
@@ -327,8 +342,8 @@ switch $group_style {
 						"$external_company_name"
 						"$expense_payment_type"
 						"\#align='center' $vat_formatted"
-						"\#align='right' $amount_formatted $currency"
-						"\#align='right' $amount_converted_formatted $default_currency"
+						"\#align='right' $amount_pretty $currency"
+						"\#align='right' $amount_converted_pretty $default_currency"
 						"\#align='center' $billable_p"
 					        "$receipt_reference"
 						"$note"
@@ -337,12 +352,12 @@ switch $group_style {
 				] \
 				footer {
 					"\#colspan=10"
-					"\#colspan=4 <nobr><i>$employee_subtotal $default_currency</i></nobr>"
+					"\#colspan=4 <nobr><i>$employee_subtotal_pretty $default_currency</i></nobr>"
 				} \
 			] \
 			footer {
 				"\#colspan=10"
-				"\#colspan=4 <nobr><b>$project_subtotal $default_currency</b></nobr>"
+				"\#colspan=4 <nobr><b>$project_subtotal_pretty $default_currency</b></nobr>"
 			} \
 		] \
 		footer {  } \
@@ -421,8 +436,8 @@ switch $group_style {
 						"$external_company_name"
 						"$expense_payment_type"
 						"\#align='center' $vat_formatted"
-						"\#align='right' $amount_formatted $currency"
-						"\#align='right' $amount_converted_formatted $default_currency"
+						"\#align='right' $amount_pretty $currency"
+						"\#align='right' $amount_converted_pretty $default_currency"
 						"\#align='center' $billable_p"
 						"$receipt_reference"
 						"$note"
@@ -431,12 +446,12 @@ switch $group_style {
 				] \
 				footer {
 					"\#colspan=10"
-					"\#colspan=4 <nobr><i>$exptype_subtotal $default_currency</i></nobr>"
+					"\#colspan=4 <nobr><i>$exptype_subtotal_pretty $default_currency</i></nobr>"
 				} \
 			] \
 			footer {
 				"\#colspan=10"
-				"\#colspan=4 <nobr><b>$project_subtotal $default_currency</b></nobr>"
+				"\#colspan=4 <nobr><b>$project_subtotal_pretty $default_currency</b></nobr>"
 			} \
 		] \
 		footer {  } \
@@ -517,8 +532,8 @@ switch $group_style {
 						"$external_company_name"
 						"$expense_payment_type"
 						"\#align='center' $vat_formatted"
-						"\#align='right' $amount_formatted $currency"
-						"\#align='right' $amount_converted_formatted $default_currency"
+						"\#align='right' $amount_pretty $currency"
+						"\#align='right' $amount_converted_pretty $default_currency"
 						"\#align='center' $billable_p"
 					        "$receipt_reference"
 						"$note"
@@ -527,17 +542,17 @@ switch $group_style {
 				] \
 				footer {
 					"\#colspan=10"
-					"\#colspan=3 <nobr>Proj: <i>$project_subtotal $default_currency</i></nobr>"
+					"\#colspan=3 <nobr>Proj: <i>$project_subtotal_pretty $default_currency</i></nobr>"
 				} \
 			] \
 			footer {
 				"\#colspan=10"
-				"\#colspan=4 <nobr>Cust: <b>$customer_subtotal $default_currency</b></nobr>"
+				"\#colspan=4 <nobr>Cust: <b>$customer_subtotal_pretty $default_currency</b></nobr>"
 			} \
 		] \
 		footer {  
 			"\#colspan=10"
-			"\#colspan=4 <nobr>Emp: <b>$employee_subtotal $default_currency</b></nobr>"
+			"\#colspan=4 <nobr>Emp: <b>$employee_subtotal_pretty $default_currency</b></nobr>"
 		} \
 	]
 
@@ -636,6 +651,12 @@ switch $output_format {
                   </td>
                 </tr>
                 <tr>
+                  <td class=form-label><nobr>Number Format</nobr></td>
+                  <td class=form-widget>
+                    [im_report_number_locale_select number_locale $number_locale]
+                  </td>
+                </tr>
+                <tr>
                   <td class=form-label>Show complete note</td>
                   <td class=form-widget>
                         <nobr>
@@ -679,57 +700,71 @@ set note_length 20
 ns_log Notice "intranet-reporting-finance/finance-quotes-pos: sql=\n$sql"
 
 db_foreach sql $sql {
+    
+    # ToDo: Formatting
+    # $vat_formatted"
+    if { "" == $amount_unformatted } { set amount_unformatted 0}
+    if { "" == $amount_converted_unformatted } { set amount_converted_unformatted 0}
+    set amount_pretty [lc_numeric $amount_unformatted %.${rounding_precision}f $number_locale]
+    set amount_converted_pretty [lc_numeric $amount_converted_unformatted %.${rounding_precision}f $number_locale]
 
-	if {[string length $expense_payment_type] > $expense_payment_type_length} {
-	    set expense_payment_type "[string range $expense_payment_type 0 $expense_payment_type_length] ..."
-	}
 
-        if { !$show_complete_note && [string length $note] > $note_length } {
-            set note "[string range $note 0 $note_length] ..."
-        }
+    if {[string length $expense_payment_type] > $expense_payment_type_length} {
+	set expense_payment_type "[string range $expense_payment_type 0 $expense_payment_type_length] ..."
+    }
 
-	if {"" == $project_id} {
-	    set project_id 0
-	    set project_name [lang::message::lookup "" intranet-reporting.No_project "Undefined Project"]
-	}
+    if { !$show_complete_note && [string length $note] > $note_length } {
+	set note "[string range $note 0 $note_length] ..."
+    }
 
-	if {"" == $project_customer_id} {
-	    set project_customer_id 0
-	    set project_customer_name [lang::message::lookup "" intranet-reporting.No_customer "Undefined Customer"]
-	}
+    if {"" == $project_id} {
+	set project_id 0
+	set project_name [lang::message::lookup "" intranet-reporting.No_project "Undefined Project"]
+    }
 
-	if {"" == $amount_converted} {
-	    set amount_converted "<font color=red>exchange rate missing</font>"
-	}
+    if {"" == $project_customer_id} {
+	set project_customer_id 0
+	set project_customer_name [lang::message::lookup "" intranet-reporting.No_customer "Undefined Customer"]
+    }
 
-	im_report_display_footer \
-	    -output_format $output_format \
-	    -group_def $report_def \
-	    -footer_array_list $footer_array_list \
-	    -last_value_array_list $last_value_list \
-	    -level_of_detail $level_of_detail \
-	    -row_class $class \
-	    -cell_class $class
-	
-	im_report_update_counters -counters $counters
-	
-	set last_value_list [im_report_render_header \
-	    -output_format $output_format \
-	    -group_def $report_def \
-	    -last_value_array_list $last_value_list \
-	    -level_of_detail $level_of_detail \
-	    -row_class $class \
-	    -cell_class $class
-        ]
+    if {"" == $amount_converted} {
+	set amount_converted "<font color=red>exchange rate missing</font>"
+    }
 
-        set footer_array_list [im_report_render_footer \
-	    -output_format $output_format \
-	    -group_def $report_def \
-	    -last_value_array_list $last_value_list \
-	    -level_of_detail $level_of_detail \
-	    -row_class $class \
-	    -cell_class $class
-        ]
+    im_report_display_footer \
+	-output_format $output_format \
+	-group_def $report_def \
+	-footer_array_list $footer_array_list \
+	-last_value_array_list $last_value_list \
+	-level_of_detail $level_of_detail \
+	-row_class $class \
+	-cell_class $class
+    
+    im_report_update_counters -counters $counters
+
+    set project_subtotal_pretty [lc_numeric $project_subtotal %.${rounding_precision}f $number_locale]
+    set customer_subtotal_pretty [lc_numeric $customer_subtotal %.${rounding_precision}f $number_locale]
+    set employee_subtotal_pretty [lc_numeric $employee_subtotal %.${rounding_precision}f $number_locale]
+    set exptype_subtotal_pretty [lc_numeric $exptype_subtotal %.${rounding_precision}f $number_locale]
+
+    
+    set last_value_list [im_report_render_header \
+			     -output_format $output_format \
+			     -group_def $report_def \
+			     -last_value_array_list $last_value_list \
+			     -level_of_detail $level_of_detail \
+			     -row_class $class \
+			     -cell_class $class
+			]
+
+    set footer_array_list [im_report_render_footer \
+			       -output_format $output_format \
+			       -group_def $report_def \
+			       -last_value_array_list $last_value_list \
+			       -level_of_detail $level_of_detail \
+			       -row_class $class \
+			       -cell_class $class
+			  ]
 }
 
 
