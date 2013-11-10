@@ -222,7 +222,8 @@ switch $group_style {
 	set order_by_clause "
 		pcust.company_name,
 		p.project_name,
-		employee_name
+		employee_name,
+		c.effective_date
         "
     }
     cust_proj_exptype {
@@ -338,7 +339,7 @@ switch $group_style {
 						""
 						"<a href=$expense_url$cost_id><nobr>$effective_date_formatted</nobr></a>"
 						"<nobr>$cost_creation_date_formatted</nobr>"
-						"$expense_type"
+						"$expense_type_l10n"
 						"$external_company_name"
 						"$expense_payment_type"
 						"\#align='center' $vat_formatted"
@@ -365,7 +366,7 @@ switch $group_style {
 		
 	# Global header/footer
 	set header0 {"Cust" "Proj" "Emp" "Expense<br>Date" "Enter<br>Date" "Type" "Ext<br>Company" "Pay<br>Type" "%VAT" "Amount" "Amount<br>Conv" "Bill<br>able?" "Ref." "Note"}
-	set footer0 { }
+	set footer0 {"" "" "" "" "" "" "" "" "" "" "$total_pretty $default_currency" "" "" ""}
 
 	set project_subtotal_counter [list \
 	        pretty_name "Invoice Amount" \
@@ -386,11 +387,17 @@ switch $group_style {
 	        reset 0 \
 	        expr "\$amount_converted+0" \
 	]
-	
+	set grand_total_counter [list \
+	        pretty_name "Grand Total" \
+	        var total \
+	        reset 0 \
+	        expr "\$amount_converted+0" \
+	]
 	set counters [list \
 		$project_subtotal_counter \
 		$employee_subtotal_counter \
 		$project_grand_total_counter \
+		$grand_total_counter \
 	]
 
     }
@@ -421,7 +428,7 @@ switch $group_style {
 				header {
 					""
 					""
-					"\#colspan=10 $expense_type"
+					"\#colspan=10 $expense_type_l10n"
 					""
 					""
 				} \
@@ -460,6 +467,7 @@ switch $group_style {
 	# Global header/footer
 	set header0 {"Cust" "Proj" "Type" "Expense<br>Date" "Enter<br>Date" "Emp" "Ext<br>Company" "Pay<br>Type" "%VAT" "Amount" "Amount<br>Conv" "Bill<br>able?" "Ref." "Note"}
 	set footer0 { }
+	set footer0 {"" "" "" "" "" "" "" "" "" "" "$total_pretty $default_currency" "" "" ""}
 	
 	set project_subtotal_counter [list \
 	        pretty_name "Invoice Amount" \
@@ -480,11 +488,17 @@ switch $group_style {
 	        reset 0 \
 	        expr "\$amount_converted+0" \
 	]
-	
+	set grand_total_counter [list \
+	        pretty_name "Grand Total" \
+	        var total \
+	        reset 0 \
+	        expr "\$amount_converted+0" \
+	]
 	set counters [list \
 		$project_subtotal_counter \
 		$exptype_subtotal_counter \
 		$project_grand_total_counter \
+		$grand_total_counter \
 	]
 
 
@@ -528,7 +542,7 @@ switch $group_style {
 						""
 						"<a href=$expense_url$cost_id><nobr>$effective_date_formatted</nobr></a>"
 						"<nobr>$cost_creation_date_formatted</nobr>"
-						"$expense_type"
+						"$expense_type_l10n"
 						"$external_company_name"
 						"$expense_payment_type"
 						"\#align='center' $vat_formatted"
@@ -559,6 +573,7 @@ switch $group_style {
 	# Global header/footer
 	set header0 {"Emp" "Cust" "Proj" "Expense<br>Date" "Enter<br>Date" "Type" "Ext<br>Company" "Pay<br>Type" "%VAT" "Amount" "Amount<br>Conv" "Bill<br>able?" "Ref." "Note"}
 	set footer0 { }
+	set footer0 {"" "" "" "" "" "" "" "" "" "" "$total_pretty $default_currency" "" "" ""}
 	
 	set employee_subtotal_counter [list \
 	        pretty_name "Invoice Amount" \
@@ -578,10 +593,17 @@ switch $group_style {
 	        reset "\$employee_id+\$customer_id+\$project_id" \
 	        expr "\$amount_converted+0" \
 	]
+	set grand_total_counter [list \
+	        pretty_name "Grand Total" \
+	        var total \
+	        reset 0 \
+	        expr "\$amount_converted+0" \
+	]
 	set counters [list \
 		$project_subtotal_counter \
 		$customer_subtotal_counter \
 		$employee_subtotal_counter \
+		$grand_total_counter \
 	]
     }
 }
@@ -708,6 +730,8 @@ db_foreach sql $sql {
     set amount_pretty [lc_numeric $amount_unformatted %.${rounding_precision}f $number_locale]
     set amount_converted_pretty [lc_numeric $amount_converted_unformatted %.${rounding_precision}f $number_locale]
 
+    set expense_type_key [string map {" " "_"} $expense_type]
+    set expense_type_l10n [lang::message::lookup "" intranet-core.$expense_type_key $expense_type]
 
     if {[string length $expense_payment_type] > $expense_payment_type_length} {
 	set expense_payment_type "[string range $expense_payment_type 0 $expense_payment_type_length] ..."
@@ -746,6 +770,8 @@ db_foreach sql $sql {
     set customer_subtotal_pretty [lc_numeric $customer_subtotal %.${rounding_precision}f $number_locale]
     set employee_subtotal_pretty [lc_numeric $employee_subtotal %.${rounding_precision}f $number_locale]
     set exptype_subtotal_pretty [lc_numeric $exptype_subtotal %.${rounding_precision}f $number_locale]
+
+    set total_pretty [lc_numeric $total %.${rounding_precision}f $number_locale]
 
     
     set last_value_list [im_report_render_header \
