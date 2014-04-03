@@ -98,7 +98,7 @@ This report shows all expenses in the system in a given period.
 # Defaults
 
 set rowclass(0) "roweven"
-set rowclass(1) "rowodd"
+set rowclass(1) ""
 
 set days_in_past 7
 
@@ -318,8 +318,6 @@ set employee_subtotal_net_reimburse 0
 				"\#colspan=17 <a href=$this_url&customer_id=$project_customer_id&level_of_detail=4
 				target=_blank><img src=/intranet/images/plus_9.gif width=9 height=9 border=0></a>
 				<b><a href=$company_url$project_customer_id>$project_customer_name</a></b>"
-				""
-				""
 			} \
 			content [list \
 				group_by project_id \
@@ -329,8 +327,6 @@ set employee_subtotal_net_reimburse 0
 					"\#colspan=17 <a href=$this_url&project_id=$project_id&level_of_detail=4
 					target=_blank><img src=/intranet/images/plus_9.gif width=9 height=9 border=0></a>
 					<b><a href=$project_url$project_id>$project_name</a></b>"
-					""
-					""
 				} \
 				content [list \
 					header {
@@ -555,7 +551,7 @@ append header_html "
 	</tr>
 	</table>
 <br><br>	
-	<table border=0 cellspacing=2 cellpadding=2>\n
+	<table border='0' class='table_list_simple'>\n
 
 "
 
@@ -574,7 +570,7 @@ im_report_render_row \
 
 set footer_array_list [list]
 set last_value_list [list]
-set class "rowodd"
+set class ""
 set expense_payment_type_length 13
 set note_length 20
 
