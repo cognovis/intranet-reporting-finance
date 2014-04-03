@@ -702,7 +702,7 @@ switch $output_format {
 	</tr>
 	</table>
 	<br>
-	<table border=0 cellspacing=3 cellpadding=3>\n"
+        <table border='0' class='table_list_simple'>\n"
     }
 }
 	
