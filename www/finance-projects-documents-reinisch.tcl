@@ -653,7 +653,6 @@ set field_options [concat $field_options {
 	company_project_nr "Project - Customer's Project Nr"
 	source_language "Project - Source Language"
 	subject_area "Project - Subject Area"	
-	final_company "Project - Final Company"
 	reported_hours_cache "Project - Reported Hours"
 	cost_quotes_cache "Project - Quotes"
 	cost_invoices_cache "Project - Invoices"
