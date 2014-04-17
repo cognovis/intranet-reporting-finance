@@ -615,7 +615,6 @@ set field_options [concat $field_options {
 	start_date_formatted "Project - End Date"
 	company_contact_link "Project - Customer Contact"
 	company_project_nr "Project - Customer's Project Nr"
-	final_company "Project - Final Company"
 	reported_hours_cache "Project - Reported Hours"
 	cost_quotes_cache "Project - Quotes"
 	cost_invoices_cache "Project - Invoices"
