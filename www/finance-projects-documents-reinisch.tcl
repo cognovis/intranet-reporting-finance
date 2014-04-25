@@ -74,56 +74,6 @@ if {!$custom_fields_p} {
 
 
 # ------------------------------------------------------------
-# Find out all fields per object type
-
-ad_proc im_dynfield_object_attributes_for_select {
-     -object_type:required
-} {
-    Returns a list {key1 value1 key2 value2 ...} of attributes
-    and pretty_names for object.
-    The result is meant to be appended to the select list of
-    a report with custom fields
-} {
-
-    set dynfield_sql "
-    select 
-	aa.attribute_name,
-        aa.pretty_name,
-	ot.pretty_name as object_type_pretty_name
-    from 
-	acs_attributes aa
-	RIGHT OUTER join 
-		im_dynfield_attributes fa 
-		ON (aa.attribute_id = fa.acs_attribute_id)
-	LEFT OUTER join
-		(select	* from im_dynfield_layout where page_url = '') la
-		ON (fa.attribute_id = la.attribute_id)
-	LEFT OUTER join
-		user_tab_columns c
-		ON (c.table_name = upper(aa.table_name) and c.column_name = upper(aa.attribute_name)),
-	im_dynfield_widgets w,
-	acs_object_types ot
-    where 
-	aa.object_type = :object_type
-	and fa.widget_name = w.widget_name
-	and aa.object_type = ot.object_type
-    order by
-	la.pos_y, la.pos_x, aa.attribute_name
-    "
-
-    set field_options [list]
-    db_foreach dynfield_fields $dynfield_sql {
-	lappend field_options $attribute_name
-	lappend field_options "$object_type_pretty_name - $pretty_name"
-    }
-    
-    return $field_options
-}
-
-
-
-
-# ------------------------------------------------------------
 # Page Settings
 
 set page_title "Projects and Financial Documents"
@@ -638,7 +588,7 @@ set field_options {
 	project_customer_type "Company - Company Type"
 	project_customer_manager_link "Company - Key Account"
 }
-set field_options [concat $field_options [im_dynfield_object_attributes_for_select -object_type "im_company"]]
+set field_options [concat $field_options [im_dynfield::object_attributes_for_select -object_type "im_company"]]
 
 set field_options [concat $field_options {
 	project_status "Project - Project Status"
@@ -662,7 +612,7 @@ set field_options [concat $field_options {
 	cost_expense_logged_cache "Project - Exenses"
 	cost_delivery_notes_cache "Project - Delivery Notes"
 }]
-set field_options [concat $field_options [im_dynfield_object_attributes_for_select -object_type "im_project"]]
+set field_options [concat $field_options [im_dynfield::object_attributes_for_select -object_type "im_project"]]
 
 
 set location_options {"" ""}

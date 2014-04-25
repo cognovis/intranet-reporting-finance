@@ -618,7 +618,7 @@ set field_options {
 	project_customer_type "Company - Company Type"
 	project_customer_manager_link "Company - Key Account"
 }
-set field_options [concat $field_options [im_dynfield_object_attributes_for_select -object_type "im_company"]]
+set field_options [concat $field_options [im_dynfield::object_attributes_for_select -object_type "im_company"]]
 
 set field_options [concat $field_options {
 	project_status "Project - Project Status"
@@ -640,7 +640,7 @@ set field_options [concat $field_options {
 	cost_expense_logged_cache "Project - Exenses"
 	cost_delivery_notes_cache "Project - Delivery Notes"
 }]
-set field_options [concat $field_options [im_dynfield_object_attributes_for_select -object_type "im_project"]]
+set field_options [concat $field_options [im_dynfield::object_attributes_for_select -object_type "im_project"]]
 
 
 set location_options {"" ""}
