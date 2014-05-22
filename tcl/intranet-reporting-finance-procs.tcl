@@ -17,7 +17,7 @@ ad_library {
 ad_proc -public im_package_reporting_finance_id {} {
     Returns the package id of the intranet-reporting-finance module
 } {
-    return [util_memoize "im_package_reporting_finance_id_helper"]
+    return [util_memoize im_package_reporting_finance_id_helper]
 }
 
 ad_proc -private im_package_reporting_finance_id_helper {} {
