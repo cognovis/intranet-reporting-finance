@@ -464,13 +464,13 @@ db_foreach sql $sql {
 	if { "" == $project_id || "" == $project_name } {
 	    set project_id 0
 	    set help_txt [lang::message::lookup "" intranet-reporting.ProjectDeleted "The project might have been removed from the system"]
-	    set project_name "[lang::message::lookup "" intranet-reporting.No_project "Undefined Project"] [im_gif help $help_txt]"
+	    set project_name "[lang::message::lookup "" intranet-reporting.No_project "Undefined Project"] [im_gif -translate_p 0 help $help_txt]"
 	}
 
 	if {"" == $customer_id} {
 	    set customer_id 0
 	    set help_txt [lang::message::lookup "" intranet-reporting.CustomerDeleted "The customer might have been removed from the system"]
-	    set project_customer_name "[lang::message::lookup "" intranet-reporting.NoCustomer "Undefined Customer"] [im_gif help $help_txt]"
+	    set project_customer_name "[lang::message::lookup "" intranet-reporting.NoCustomer "Undefined Customer"] [im_gif -translate_p 0 help $help_txt]"
 	}
 
 	im_report_display_footer \
