@@ -209,7 +209,6 @@ set sql "
 select
 	c.*,
 	to_char(c.effective_date, :date_format) as effective_date_formatted,
-	to_char(c.effective_date, 'YYMM')::integer * customer_id as effective_month,
 	CASE WHEN c.cost_type_id = 3700 THEN c.amount_conv END as invoice_amount,
 	CASE WHEN c.cost_type_id = 3704 THEN c.amount_conv END as bill_amount,
 	CASE WHEN c.cost_type_id = 3720 THEN c.amount_conv END as expense_amount,
