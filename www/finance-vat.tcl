@@ -215,7 +215,7 @@ set sql "
 select
 	c.*,
 	to_char(c.effective_date, :date_format) as effective_date_formatted,
-	to_char(c.effective_date, 'YYMM')::integer * customer_id as effective_month,
+	-- to_char(c.effective_date, 'YYMM')::integer * customer_id as effective_month,
 	to_char(c.effective_date, 'Q')::integer as effective_quarter,
 	to_char(c.effective_date, 'YYYY-Q') as effective_year_quarter,
 	c.amount_conv as cost_item_amount,
